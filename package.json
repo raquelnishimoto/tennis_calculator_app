@@ -1,0 +1,25 @@
+{
+  "name": "tennis_calculator_app",
+  "version": "1.0.0",
+  "description": "1. navigate to folder ./tennis_calculator_app 2. run `npm install`  3. run `npm start`",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node ./src/tennis_calculator_app.ts",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
