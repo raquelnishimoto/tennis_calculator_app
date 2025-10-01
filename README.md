@@ -60,7 +60,7 @@ EOF
 Person B defeated Person A
 2 sets to 1
 
-12 10
+23 17
 ```
 
 ## Development
