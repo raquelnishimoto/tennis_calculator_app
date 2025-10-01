@@ -235,11 +235,47 @@ export function readTournamentFile(filename: string): Tournament {
   return { matches, players };
 }
 
+/**
+ * Handles query output
+ */
+
+export class TennisCalculator {
+  #matches: Matches;
+  #players: Players;
+
+  constructor(matches: Matches, players: Players) {
+    this.#matches = matches;
+    this.#players = players;
+  }
+
+  scoreMatch(id: string): string {
+    const match = this.#matches[id];
+    if (!match) return `Match ${id} not found`;
+
+    const { winner, playerA, playerB, sets } = match;
+    const defeated = winner === playerA ? playerB : playerA;
+    const maxPoints = Math.max(...sets);
+    const minPoints = Math.min(...sets);
+
+    return `${match.winner} defeated ${defeated}\n${maxPoints} sets to ${minPoints}`;
+  }
+
+  gamesForPlayer(name: string): string {
+    const player = this.#players[name]
+
+    if (!player) return `Player ${name} not found`;
+
+    return `${player.gamesWon} ${player.gamesLost}`;
+  }
+}
+
 function main() {
   const MATCH_QUERY = "Score Match";
   const PLAYER_QUERY = "Games Player";
 
-  console.log(readTournamentFile("full_tournament.txt"));
+  const { matches, players } = readTournamentFile("full_tournament.txt");
+  const calculator = new TennisCalculator(matches, players);
+
   process.stdin.setEncoding("utf8");
 
   process.stdin.on("data", (chunk: string) => {
@@ -247,24 +283,26 @@ function main() {
 
     if (!query) return;
 
-    // query.forEach((line) => {
-    //   /* Argument for match and player will be located at 2 index
-    //    ** e.g. Score Match <id> or Games Player <name>
-    //    */
-    //   const arg = line.split(" ").slice(2).join(" ").trim();
+    let output = `\n`;
 
-    //   if (line.startsWith(MATCH_QUERY)) {
-    //     console.log(`match id ${arg}`);
-    //   }
-    //   if (line.startsWith(PLAYER_QUERY)) {
-    //     console.log(`player name ${arg}`);
-    //   }
-    // });
+    query.forEach((line) => {
+      /* Argument for match and player will be located at 2 index
+       ** e.g. Score Match <id> or Games Player <name>
+       */
+      const arg = line.split(" ").slice(2).join(" ").trim();
+
+      if (line.startsWith(MATCH_QUERY)) {
+        output += calculator.scoreMatch(arg);
+        output += `\n`;
+      }
+      if (line.startsWith(PLAYER_QUERY)) {
+        output += `\n`;
+        output += calculator.gamesForPlayer(arg);
+      }
+    });
+
+    console.log(output);
   });
-
-  //   process.stdin.on("end", () => {
-  //     // console.log("query end");
-  //   });
 }
 
 // Allows importing functions for tests without triggering the CLI logic.
