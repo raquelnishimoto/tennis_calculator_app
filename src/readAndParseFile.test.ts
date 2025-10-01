@@ -1,4 +1,5 @@
 import { readTournamentFile } from "./readAndParseFile";
+import * as fs from "fs";
 
 /*
  * Data driven tests, same test handling different input
@@ -112,6 +113,49 @@ const testCases = [
 
 testCases.forEach(({ testName, inputFile, expectedResult }) => {
   test(testName, () => {
-    expect(readTournamentFile(`test/test_data/${inputFile}`)).toEqual(expectedResult);
+    expect(readTournamentFile(`test/test_data/${inputFile}`)).toEqual(
+      expectedResult
+    );
   });
 });
+
+/**
+ * Test error scenarios
+ */
+
+
+describe("", () => {
+  jest.mock("fs");
+  let consoleErrorSpy: jest.SpyInstance;
+
+beforeEach(() => {
+  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  consoleErrorSpy.mockRestore();
+  jest.resetAllMocks();
+});
+
+test("readTournamentFile logs an error when filepath is missing", () => {
+  const result = readTournamentFile("");
+
+  expect(consoleErrorSpy).toHaveBeenCalledWith(
+    "Something went wrong: File name is missing"
+  );
+  expect(result).toBeUndefined();
+});
+
+test("readTournamentFile logs an error when fs.readFileSync throws", () => {
+  const fsSpy = jest.spyOn(fs, "readFileSync").mockImplementation(() => {
+    throw new Error("File read failed");
+  });
+
+  const result = readTournamentFile("fakefile.txt");
+
+  expect(consoleErrorSpy).toHaveBeenCalledWith(
+    "Something went wrong: File read failed"
+  );
+  expect(result).toBeUndefined();
+});
+})

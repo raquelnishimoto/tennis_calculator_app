@@ -8,9 +8,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "ts-node ./src/tennis_calculator_app.ts",
-    "test": "jest",
-    "cli": "ts-node ./src/index.ts"
+    "start": "ts-node ./src/main.ts test/test_data/full_tournament.txt ",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",

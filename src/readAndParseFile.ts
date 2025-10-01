@@ -1,6 +1,5 @@
 import * as fs from "fs";
-import * as path from "path";
-import {Matches, Players} from './types';
+import { Matches, Players } from "./types";
 
 type Tournament = {
   matches: Matches;
@@ -20,7 +19,6 @@ type ComputeWinner = {
   playerA: string;
   playerB: string;
 };
-
 
 /**
  * Compute winner best of 3 sets (first to 2 sets wins).
@@ -162,57 +160,60 @@ export function aggregateMatch(
  */
 
 export function readTournamentFile(filepath: string): Tournament {
-  if (!filepath) {
-    throw new Error("File name is missing");
-  }
-
-  const lines = fs.readFileSync(filepath, "utf8").trim().split("\n");
-
-  const MATCH_HEADING = "Match:";
-  const PLAYERS_HEADING = "vs";
-
-  const matches: Matches = {};
-  const players: Players = {};
-
-  let currentMatch: CurrentMatch = null;
-
-  for (const line of lines) {
-    // start a new match
-    if (line.startsWith(MATCH_HEADING)) {
-      const id = line.replace(MATCH_HEADING, "").trim();
-      if (currentMatch) {
-        aggregateMatch(currentMatch, matches, players);
-      }
-
-      // initialise match data
-      currentMatch = { id, playerA: "", playerB: "", points: [] };
+  try {
+    if (!filepath) {
+      throw new Error("File name is missing");
     }
-    // set playerA and playerB
-    else if (line.includes(PLAYERS_HEADING)) {
-      const [a, b] = line.split(PLAYERS_HEADING).map((x) => x.trim());
+    const lines = fs.readFileSync(filepath, "utf8").trim().split("\n");
 
-      currentMatch.playerA = a;
-      currentMatch.playerB = b;
+    const MATCH_HEADING = "Match:";
+    const PLAYERS_HEADING = "vs";
 
-      // initialise players data
-      if (!players[a]) {
-        players[a] = { gamesWon: 0, gamesLost: 0 };
+    const matches: Matches = {};
+    const players: Players = {};
+
+    let currentMatch: CurrentMatch = null;
+
+    for (const line of lines) {
+      // start a new match
+      if (line.startsWith(MATCH_HEADING)) {
+        const id = line.replace(MATCH_HEADING, "").trim();
+        if (currentMatch) {
+          aggregateMatch(currentMatch, matches, players);
+        }
+
+        // initialise match data
+        currentMatch = { id, playerA: "", playerB: "", points: [] };
       }
-      if (!players[b]) {
-        players[b] = { gamesWon: 0, gamesLost: 0 };
-      }
-      // parseInt(line).toString() to handle end of line \r
-    } else if (line === "0" || line === "1") {
-      if (currentMatch) {
-        currentMatch.points.push(Number(line));
+      // set playerA and playerB
+      else if (line.includes(PLAYERS_HEADING)) {
+        const [a, b] = line.split(PLAYERS_HEADING).map((x) => x.trim());
+
+        currentMatch.playerA = a;
+        currentMatch.playerB = b;
+
+        // initialise players data
+        if (!players[a]) {
+          players[a] = { gamesWon: 0, gamesLost: 0 };
+        }
+        if (!players[b]) {
+          players[b] = { gamesWon: 0, gamesLost: 0 };
+        }
+        // parseInt(line).toString() to handle end of line \r
+      } else if (line === "0" || line === "1") {
+        if (currentMatch) {
+          currentMatch.points.push(Number(line));
+        }
       }
     }
-  }
 
-  // handle last match
-  if (currentMatch) {
-    aggregateMatch(currentMatch, matches, players);
-  }
+    // handle last match
+    if (currentMatch) {
+      aggregateMatch(currentMatch, matches, players);
+    }
 
-  return { matches, players };
+    return { matches, players };
+  } catch (error) {
+    console.error(`Something went wrong: ${error.message}`)
+  }
 }

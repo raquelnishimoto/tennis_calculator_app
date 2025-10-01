@@ -1,107 +1,103 @@
-# Local setup
-## Install dependencies and run code:
-1. navigate to folder ./tennis_calculator_app
-2. run `npm install` 
-3. run `npm start`
-
-## Runtests:
-1. navigate to folder ./tennis_calculator_app
-2. run `npm test`
-
 # Tennis Calculator
 
-The tennis calculator takes a set of scores as inputs and produces useful statistics based on those scores.
-
-This calculator will used a simplified version of scoring where whoever gets to 6 games first wins the set
-
-## Overview
-
-The Tennis Calculator takes inputs in the form of a list of points of a tennis match. 
-
-Given this list of points, it will calculate the "games", "sets" and "matches" results.
-
-From there it can be queried about various statistics around the input matches it received. 
-
-## Input
-
-The input will have some header lines, and then a list of points. 
-For example:, the following would result in 2 games to "Person A":
-
-    Match: 01
-    Person A vs Person B
-    0
-    1
-    0
-    1
-    0
-    0
-    0
-    0
-    0
-    0
-
-    
-The first row is a match id, the second row shows who is playing against whom.
-After that are a series of points, where 0 is a point for the first person listed, 1 is for last person.
-
-i.e.
-
-| Input                | Score   |
-|----------------------|---------|
-| Match: 01            |         |
-| Person A vs Person B |         |
-| 0                    | 15 - 0  |
-| 1                    | 15 - 15 |
-| 0                    | 30 - 15 |
-| 1                    | 30 - 30 |
-| 0                    | 40 - 30 |
-| 0                    | Game    |
-| 0                    | 15 - 0  |
-| 0                    | 30 - 0  |
-| 0                    | 40 - 0  |
-| 0                    | Game    |
+A simple TypeScript CLI tool to parse tournament files, compute match results, and query player statistics.
 
 
-For processing, blank lines must be ignored
+## Features
 
-## Queries
+- Parse tournament text files into structured data (`matches`, `players`).  
+- Compute **sets won**, **match winner**, and **game statistics**.  
+- Query results:
+  - `Score Match <id>` → match score and winner
+  - `Games Player <name>` → total games won/lost by a player  
+- Pure functional design: parsing, aggregation, and queries are modular and testable.
 
-### Query match result
-Query scores for a particular match
-Prints who defeated whom, and the result of the sets for the match (winning player score first).
+---
 
-Query: `Score Match <id>`
+## Project Structure
 
-Example: `Score Match 01`
+```
+src/
+├── main.ts # CLI entry point
+├── readAndParseFile.ts # Reads and parses tournament files
+├── handleQueries.ts # Handles user queries, 
+├── types.ts # Shared TypeScript types
+test/
+└── test_data/ # Example tournament input files
+```
 
-Example output:
+## Usage
 
-    Person A defeated Person B
-    2 sets to 0
- 
-### Query games for player
-Prints a summary of games won vs lost for a particular player over the tournament
-Query: `Games Player <Player Name>`
+### 1. Install dependencies
 
-Example: `Games Player Person A`
+```bash
+npm install
+```
 
-Example output:
+### 2. Run with ts-node
 
-    23 17
+```bash
+npx ts-node src/main.ts test/test_data/full_tournament.txt
+```
+Then type queries into stdin:
 
-## Sample output
-Running the application against the 'full_tournament.txt' file results in the following:
+```
+Score Match 02
+Games Player Person A
+```
 
-    $ tennis_calculator_app test/test_data/full_tournament.txt << EOF
-    Score Match 02
-    Games Player Person A
-    EOF
-    
-    Person C defeated Person A
-    2 sets to 1
-    
-    23 17
-    
+Press Enter after each query, or use a here-doc:
+```
+npx ts-node src/main.ts test/test_data/full_tournament.txt << EOF
+Score Match 02
+Games Player Person A
+EOF
+```
+
+---
+## Example Output
+```
+Person B defeated Person A
+2 sets to 1
+
+12 10
+```
+
+## Development
+### Run tests (if you add Jest or similar):
+```
+npm test
+```
+
+### Lint / Format:
+```
+npm run lint
+npm run format
+```
+
+---
+
+## Assumptions / Limitations
+* File Formatting
+    - The tournament test file needs to conform to the expected format. 
+    - Points should **not** be preceded by special characters such as \r (common when copying from Windows). Improper formatting can break parsing.
+
+* File path usability:
+    - Users must provide the correct relative path to the tournament file. Errors such as missing or incorrect paths will result in messages like:
+    ```
+    Filepath is missing: ts-node src/main.ts <tournament-file>
+    ```
+    or
+    ```
+    Something went wrong: <errormessage>
+    ```
+    which may result in undefined output in the CLI.
+
+* CLI only:
+    - This tool is currently designed as a CLI; no GUI or web interface is provided.
+
+* Limited query types:
+    - Only Score Match <id> and Games Player <name> are implemented. Other statistics must be added manually in handleQueries.ts.
 
 ## Scoring Rules
 Details of tennis scoring can be found online. See here for reference:  
