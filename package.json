@@ -1,7 +1,7 @@
 {
   "name": "tennis_calculator_app",
   "version": "1.0.0",
-  "description": "1. navigate to folder ./tennis_calculator_app 2. run `npm install`  3. run `npm start`",
+  "description": "The tennis calculator takes a set of scores as inputs and produces useful statistics based on those scores.",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "start": "ts-node ./src/tennis_calculator_app.ts",
-    "test": "jest"
+    "test": "jest",
+    "cli": "ts-node ./src/index.ts"
   },
   "keywords": [],
   "author": "",

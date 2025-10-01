@@ -1,154 +1,277 @@
 import * as fs from "fs";
 import * as path from "path";
 
-type Sets = Record<string, number>;
-type Games = Record<string, number>;
-
 type MatchData = {
-  players: [string, string];
-  games: { [player: string]: number }; // total of games won
-  sets: { [player: string]: number }; // total of sets won
-  winner: string | null;
+  id: string;
+  winner: string;
+  playerA: string;
+  playerB: string;
+  sets: [number, number]; // total sets won
 };
 
-type Tournament = Record<string, MatchData>;
+type PlayerData = {
+  gamesWon: number;
+  gamesLost: number;
+};
+
+type Name = string;
+type Id = string;
+
+type Matches = Record<Id, MatchData>;
+type Players = Record<Name, PlayerData>;
+
+type Tournament = {
+  matches: Matches;
+  players: Players;
+};
+
+type CurrentMatch = {
+  id: string;
+  playerA: string;
+  playerB: string;
+  points: number[];
+} | null;
+
+type ComputeWinner = {
+  setsA: number;
+  setsB: number;
+  playerA: string;
+  playerB: string;
+};
 
 /**
- * Loads tournament full score from a file
- * @param {string} filename - name of the file in test/test_data folder
- * @returns {string}
+ * Compute winner best of 3 sets (first to 2 sets wins).
  */
-function readAndParseTournamentFile(filename: string): Tournament {
-  const NEW_MATCH = "Match:";
-  const NEW_MATCH_SEPARATOR = ":";
-  const PLAYERS = " vs ";
-  const ZERO = "0";
-  const ONE = "1";
-  const tournament: Tournament = {};
 
-  const filepath = path.join(__dirname, "..", "test", "test_data", filename);
-  const lines = fs.readFileSync(filepath, "utf8").trim().split("\n");
+function computeWinner({
+  setsA,
+  setsB,
+  playerA,
+  playerB,
+}: ComputeWinner): string | null {
+  const WINNER_MIN_POINTS = 2;
 
-  let currentMatchId = "";
-  const gamePoints = { 0: 0, 1: 0 };
-
-  for (const line of lines) {
-    // skip blank lines
-    if (!line.trim()) continue;
-
-    // Match: id starts a new match
-    if (line.startsWith(NEW_MATCH)) {
-      currentMatchId = line.split(NEW_MATCH_SEPARATOR)[1].trim();
-      tournament[currentMatchId] = {
-        players: ["", ""],
-        games: {},
-        sets: {},
-        winner: null,
-      };
-
-      // 'Person X vs Person Y' extract players name
-    } else if (line.includes(PLAYERS)) {
-      const [playerA, playerB] = line.split(PLAYERS);
-      const A = playerA.trim();
-      const B = playerB.trim();
-      tournament[currentMatchId].players = [A, B];
-
-      // set the initial values for games and sets
-      tournament[currentMatchId].games = { [A]: 0, [B]: 0 };
-      tournament[currentMatchId].sets = { [A]: 0, [B]: 0 };
-
-      // 0 or 1 push points in array for the match
-    } else if (line === ZERO || line === ONE) {
-      gamePoints[line] += 1;
-
-      // Check if player has 4 points and 2 ahead?
-      const gameWinnerIdx = getGameWinnerIdx(gamePoints);
-      if (gameWinnerIdx >= 0) {
-        const gameWinnerName =
-          tournament[currentMatchId].players[gameWinnerIdx];
-        // increment games counter
-        tournament[currentMatchId].games[gameWinnerName] += 1;
-
-        // reset game points
-        gamePoints[0] = 0;
-        gamePoints[1] = 0;
-      }
-
-      const players = tournament[currentMatchId].players;
-      // Check if player has 6 games?
-      const setWinnerName = getSetWinnerName(tournament[currentMatchId].games);
-      if (setWinnerName) {
-        //increment sets counter
-        tournament[currentMatchId].sets[setWinnerName] += 1;
-
-        tournament[currentMatchId].games = {
-          [players[0]]: 0,
-          [players[1]]: 0,
-        };
-      }
-
-      // Check if player has 2 sets?
-      const sets = tournament[currentMatchId].sets;
-      const matchWinner = getMatchWinnerName(sets, players);
-      if (matchWinner) {
-        tournament[currentMatchId].winner = matchWinner;
-      }
-    }
+  if (setsA >= WINNER_MIN_POINTS) {
+    return playerA;
   }
-
-  return tournament;
-}
-
-function getGameWinnerIdx(points: Record<"0" | "1", number>) {
-  let winner = -1;
-  const WINNER_MIN_POINTS = 4;
-  const WINNER_POINTS_DIFFERENCE = 2;
-
-  const playerAPoints = points[0];
-  const playerBPoints = points[1];
-  if (
-    playerAPoints >= WINNER_MIN_POINTS &&
-    playerAPoints - playerBPoints >= WINNER_POINTS_DIFFERENCE
-  ) {
-    winner = 0;
-  }
-  if (
-    playerBPoints >= WINNER_MIN_POINTS &&
-    playerBPoints - playerAPoints >= WINNER_POINTS_DIFFERENCE
-  ) {
-    winner = 1;
-  }
-
-  return winner;
-}
-
-function getSetWinnerName(games: Games): string | null {
-  const WINNER_MIN_POINTS = 6;
-
-  for (const player in games) {
-    if (games[player] >= WINNER_MIN_POINTS) {
-      return player;
-    }
+  if (setsB >= WINNER_MIN_POINTS) {
+    return playerB;
   }
 
   return null;
 }
 
-function getMatchWinnerName(points: Sets, players: [string, string]) {
-  let winner = null;
-  const WINNER_MIN_POINTS = 2;
+/**
+ * Compute sets won given a sequence of game wins
+ */
+function computeSets(gamesA: number[], gamesB: number[]): [number, number] {
+  let setsA = 0;
+  let setsB = 0;
 
-  const [playerA, playerB] = players;
-  const playerAPoints = points[playerA];
-  const playerBPoints = points[playerB];
-  if (playerAPoints >= WINNER_MIN_POINTS) {
-    winner = playerA;
-  }
-  if (playerBPoints >= WINNER_MIN_POINTS) {
-    winner = playerB;
+  for (let i = 0; i < gamesA.length; i++) {
+    // handle incomplete sets
+    if (gamesA[i] < 6 && gamesB[i] < 6) continue;
+
+    if (gamesA[i] > gamesB[i]) {
+      setsA += 1;
+    } else {
+      setsB += 1;
+    }
   }
 
-  return winner;
+  return [setsA, setsB];
 }
 
-console.log(readAndParseTournamentFile("full_tournament.txt"));
+/**
+ * Converts points into games/sets and updates matches & players
+ */
+
+export function aggregateMatch(
+  match: CurrentMatch,
+  matches: Matches,
+  players: Players
+): void {
+  const GAME_MIN_POINTS = 4;
+  const SET_MIN_POINTS = 6;
+  const WIN_LEAD = 2;
+
+  let pointsInGameA = 0;
+  let pointsInGameB = 0;
+  let gamesInSetA = 0;
+  let gamesInSetB = 0;
+  const gamesWonPerSetA: number[] = [];
+  const gamesWonPerSetB: number[] = [];
+
+  for (const point of match.points) {
+    if (point === 0) {
+      pointsInGameA += 1;
+    } else {
+      pointsInGameB += 1;
+    }
+
+    // check if player won game: 4 points and 2 leads
+    const leadA = pointsInGameA - pointsInGameB;
+    const leadB = pointsInGameB - pointsInGameA;
+
+    const hasWonGameA = pointsInGameA >= GAME_MIN_POINTS && leadA >= WIN_LEAD;
+    const hasWonGameB = pointsInGameB >= GAME_MIN_POINTS && leadB >= WIN_LEAD;
+
+    if (hasWonGameA) {
+      gamesInSetA += 1;
+
+      // reset game points
+      pointsInGameA = 0;
+      pointsInGameB = 0;
+    } else if (hasWonGameB) {
+      gamesInSetB += 1;
+
+      // reset game points
+      pointsInGameA = 0;
+      pointsInGameB = 0;
+    }
+
+    // Check if player has won 6 games
+    if (gamesInSetA >= SET_MIN_POINTS || gamesInSetB >= SET_MIN_POINTS) {
+      gamesWonPerSetA.push(gamesInSetA);
+      gamesWonPerSetB.push(gamesInSetB);
+
+      // reset count
+      gamesInSetA = 0;
+      gamesInSetB = 0;
+    }
+  }
+
+  // handle last set of the match in case it does not reach 6 points
+  if (gamesInSetA > 0 || gamesInSetB > 0) {
+    gamesWonPerSetA.push(gamesInSetA);
+    gamesWonPerSetB.push(gamesInSetB);
+
+    // reset count
+    gamesInSetA = 0;
+    gamesInSetB = 0;
+  }
+
+  const [setsA, setsB] = computeSets(gamesWonPerSetA, gamesWonPerSetB);
+
+  const { id, playerA, playerB } = match;
+  const winner = computeWinner({ setsA, setsB, playerA, playerB });
+
+  matches[id] = {
+    id,
+    playerA,
+    playerB,
+    winner,
+    sets: [setsA, setsB],
+  };
+
+  const totalGamesA = gamesWonPerSetA.reduce((a, b) => a + b, 0);
+  const totalGamesB = gamesWonPerSetB.reduce((a, b) => a + b, 0);
+
+  players[match.playerA].gamesWon += totalGamesA;
+  players[match.playerA].gamesLost += totalGamesB;
+
+  players[match.playerB].gamesWon += totalGamesB;
+  players[match.playerB].gamesLost += totalGamesA;
+}
+
+/**
+ * Parses the tournament file and aggregates match/player stats
+ */
+
+export function readTournamentFile(filename: string): Tournament {
+  if (!filename) {
+    throw new Error("File name is missing");
+  }
+
+  const filepath = path.join(__dirname, "..", "test", "test_data", filename);
+  const lines = fs.readFileSync(filepath, "utf8").trim().split("\n");
+
+  const MATCH_HEADING = "Match:";
+  const PLAYERS_HEADING = "vs";
+
+  const matches: Matches = {};
+  const players: Players = {};
+
+  let currentMatch: CurrentMatch = null;
+
+  for (const line of lines) {
+    // start a new match
+    if (line.startsWith(MATCH_HEADING)) {
+      const id = line.replace(MATCH_HEADING, "").trim();
+      if (currentMatch) {
+        aggregateMatch(currentMatch, matches, players);
+      }
+
+      // initialise match data
+      currentMatch = { id, playerA: "", playerB: "", points: [] };
+    }
+    // set playerA and playerB
+    else if (line.includes(PLAYERS_HEADING)) {
+      const [a, b] = line.split(PLAYERS_HEADING).map((x) => x.trim());
+
+      currentMatch.playerA = a;
+      currentMatch.playerB = b;
+
+      // initialise players data
+      if (!players[a]) {
+        players[a] = { gamesWon: 0, gamesLost: 0 };
+      }
+      if (!players[b]) {
+        players[b] = { gamesWon: 0, gamesLost: 0 };
+      }
+      // parseInt(line).toString() to handle end of line \r
+    } else if (line === "0" || line === "1") {
+      if (currentMatch) {
+        currentMatch.points.push(Number(line));
+      }
+    }
+  }
+
+  // handle last match
+  if (currentMatch) {
+    aggregateMatch(currentMatch, matches, players);
+  }
+
+  return { matches, players };
+}
+
+function main() {
+  const MATCH_QUERY = "Score Match";
+  const PLAYER_QUERY = "Games Player";
+
+  console.log(readTournamentFile("full_tournament.txt"));
+  process.stdin.setEncoding("utf8");
+
+  process.stdin.on("data", (chunk: string) => {
+    const query = chunk.trim().split("\n");
+
+    if (!query) return;
+
+    // query.forEach((line) => {
+    //   /* Argument for match and player will be located at 2 index
+    //    ** e.g. Score Match <id> or Games Player <name>
+    //    */
+    //   const arg = line.split(" ").slice(2).join(" ").trim();
+
+    //   if (line.startsWith(MATCH_QUERY)) {
+    //     console.log(`match id ${arg}`);
+    //   }
+    //   if (line.startsWith(PLAYER_QUERY)) {
+    //     console.log(`player name ${arg}`);
+    //   }
+    // });
+  });
+
+  //   process.stdin.on("end", () => {
+  //     // console.log("query end");
+  //   });
+}
+
+// Allows importing functions for tests without triggering the CLI logic.
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  readTournamentFile,
+};
