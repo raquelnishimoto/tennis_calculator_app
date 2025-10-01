@@ -261,7 +261,7 @@ export class TennisCalculator {
   }
 
   gamesForPlayer(name: string): string {
-    const player = this.#players[name]
+    const player = this.#players[name];
 
     if (!player) return `Player ${name} not found`;
 
