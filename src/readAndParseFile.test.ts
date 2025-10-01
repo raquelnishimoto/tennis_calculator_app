@@ -1,4 +1,4 @@
-import * as T from "./tennis_calculator_app";
+import { readTournamentFile } from "./readAndParseFile";
 
 /*
  * Data driven tests, same test handling different input
@@ -112,6 +112,6 @@ const testCases = [
 
 testCases.forEach(({ testName, inputFile, expectedResult }) => {
   test(testName, () => {
-    expect(T.readTournamentFile(`test/test_data/${inputFile}`)).toEqual(expectedResult);
+    expect(readTournamentFile(`test/test_data/${inputFile}`)).toEqual(expectedResult);
   });
 });

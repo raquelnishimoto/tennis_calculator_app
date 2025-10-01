@@ -1,24 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-
-type MatchData = {
-  id: string;
-  winner: string;
-  playerA: string;
-  playerB: string;
-  sets: [number, number]; // total sets won
-};
-
-type PlayerData = {
-  gamesWon: number;
-  gamesLost: number;
-};
-
-type Name = string;
-type Id = string;
-
-type Matches = Record<Id, MatchData>;
-type Players = Record<Name, PlayerData>;
+import {Matches, Players} from './types';
 
 type Tournament = {
   matches: Matches;
@@ -38,6 +20,7 @@ type ComputeWinner = {
   playerA: string;
   playerB: string;
 };
+
 
 /**
  * Compute winner best of 3 sets (first to 2 sets wins).
@@ -178,13 +161,12 @@ export function aggregateMatch(
  * Parses the tournament file and aggregates match/player stats
  */
 
-export function readTournamentFile(filename: string): Tournament {
-  if (!filename) {
+export function readTournamentFile(filepath: string): Tournament {
+  if (!filepath) {
     throw new Error("File name is missing");
   }
 
-  const filepath = path.join(__dirname, "..", "test", "test_data", filename);
-  const lines = fs.readFileSync(filename, "utf8").trim().split("\n");
+  const lines = fs.readFileSync(filepath, "utf8").trim().split("\n");
 
   const MATCH_HEADING = "Match:";
   const PLAYERS_HEADING = "vs";
@@ -234,82 +216,3 @@ export function readTournamentFile(filename: string): Tournament {
 
   return { matches, players };
 }
-
-/**
- * Handles query output
- */
-
-export class TennisCalculator {
-  #matches: Matches;
-  #players: Players;
-
-  constructor(matches: Matches, players: Players) {
-    this.#matches = matches;
-    this.#players = players;
-  }
-
-  scoreMatch(id: string): string {
-    const match = this.#matches[id];
-    if (!match) return `Match ${id} not found`;
-
-    const { winner, playerA, playerB, sets } = match;
-    const defeated = winner === playerA ? playerB : playerA;
-    const maxPoints = Math.max(...sets);
-    const minPoints = Math.min(...sets);
-
-    return `${match.winner} defeated ${defeated}\n${maxPoints} sets to ${minPoints}`;
-  }
-
-  gamesForPlayer(name: string): string {
-    const player = this.#players[name];
-
-    if (!player) return `Player ${name} not found`;
-
-    return `${player.gamesWon} ${player.gamesLost}`;
-  }
-}
-
-function main() {
-  const MATCH_QUERY = "Score Match";
-  const PLAYER_QUERY = "Games Player";
-
-  const { matches, players } = readTournamentFile("full_tournament.txt");
-  const calculator = new TennisCalculator(matches, players);
-
-  process.stdin.setEncoding("utf8");
-
-  process.stdin.on("data", (chunk: string) => {
-    const query = chunk.trim().split("\n");
-
-    if (!query) return;
-
-    let output = `\n`;
-
-    query.forEach((line) => {
-      /* Argument for match and player will be located at 2 index
-       ** e.g. Score Match <id> or Games Player <name>
-       */
-      const arg = line.split(" ").slice(2).join(" ").trim();
-
-      if (line.startsWith(MATCH_QUERY)) {
-        output += calculator.scoreMatch(arg);
-        output += `\n`;
-      }
-      if (line.startsWith(PLAYER_QUERY)) {
-        output += `\n`;
-        output += calculator.gamesForPlayer(arg);
-      }
-    });
-
-    console.log(output);
-  });
-}
-
-// Allows importing functions for tests without triggering the CLI logic.
-if (require.main === module) {
-  main();
-}
-
-module.exports = {
-  readTournamentFile,
-};
